@@ -14,38 +14,41 @@ A command-line tool that takes a natural language question, decomposes it into s
 - 🪞 **Reflective Slot Check** — Uses Gemini to verify if all required information slots are filled.
 - 🧠 **Synthesis Engine** — Synthesizes a short, beginner-friendly answer with [Markdown-style citations].
 - 💾 **Redis Cache** — Speeds up repeated queries with caching (max 50 entries).
-- 🧪 **Comprehensive Unit Tests** — Tests reflect function across 5 scenarios: ✅ normal, 🚫 no docs, 🔁 two-round, ⚠️ 429, ⏱️ timeout.
+- 🧪 **Comprehensive Unit Tests** — Tests reflect function across:
+  - ✅ normal
+  - 🚫 no docs
+  - 🔁 two-round follow-up
+  - ⚠️ 429 errors
+  - ⏱️ timeout
 
 ---
 
 ## 📂 Project Structure
 
+```
 llm-research-agent/
 ├── src/
-│ ├── main.py
-│ └── agent/
-│ ├── nodes/
-│ │ ├── generate_queries.py
-│ │ ├── reflect.py
-│ │ └── synthesize.py
-│ ├── tools/
-│ │ └── websearch.py
-│ ├── types/
-│ │ └── document.py
-│ └── utils/
-│ ├── slot_utils.py
-│ └── cache_utils.py
+│   ├── main.py
+│   └── agent/
+│       ├── nodes/
+│       │   ├── generate_queries.py
+│       │   ├── reflect.py
+│       │   └── synthesize.py
+│       ├── tools/
+│       │   └── websearch.py
+│       ├── types/
+│       │   └── document.py
+│       └── utils/
+│           ├── slot_utils.py
+│           └── cache_utils.py
 ├── tests/
-│ ├── test_reflect.py
-│ ├── test_queries.py
-│ └── conftest.py
+│   ├── test_reflect.py
+│   ├── test_queries.py
+│   └── conftest.py
 ├── .env.example
 ├── requirements.txt
 └── README.md
-
-yaml
-Copy
-Edit
+```
 
 ---
 
@@ -62,41 +65,44 @@ pip install -r requirements.txt
 
 # Copy and fill environment variables
 cp .env.example .env
-2️⃣ Set Up .env
-env
-Copy
-Edit
+```
+
+### 2️⃣ Set Up `.env`
+
+```env
 GEMINI_API_KEY=your_google_genai_key
 GOOGLE_API_KEY=your_google_search_api_key
 GOOGLE_CSE_ID=your_custom_search_engine_id
 REDIS_HOST=localhost
-🧪 Run Tests
-bash
-Copy
-Edit
+```
+
+---
+
+## 🧪 Run Tests
+
+```bash
 pytest -q tests/
-Tests cover:
+```
 
-✅ Happy path
+Test coverage includes:
 
-🈳 No results
+- ✅ Happy path  
+- 🈳 No results  
+- ⛔ HTTP 429 (rate limited)  
+- ⏱ Timeout  
+- 🔁 Follow-up query suggestion  
 
-⛔ HTTP 429 (rate limited)
+---
 
-⏱ Timeout
+## 🧠 CLI Usage Example
 
-🔁 Two-round supplement (follow-up queries)
-
-🧠 CLI Usage Example
-bash
-Copy
-Edit
+```bash
 python src/main.py "Who won the 2022 FIFA World Cup and who scored the goals?"
-📦 Output:
+```
 
-json
-Copy
-Edit
+### 📦 Output
+
+```json
 {
   "status": "complete",
   "answer": "Argentina won the 2022 World Cup final against France [1]. Lionel Messi and Kylian Mbappé were the top scorers [1].",
@@ -108,10 +114,13 @@ Edit
     }
   ]
 }
-🧑‍💻 Python API Usage
-python
-Copy
-Edit
+```
+
+---
+
+## 🧑‍💻 Python API Usage
+
+```python
 from agent.nodes.synthesize import synthesize
 from agent.types.document import Document
 
@@ -127,10 +136,13 @@ docs = [
 
 answer = synthesize(question, docs)
 print(answer)
-🔄 Architecture Flow
-mermaid
-Copy
-Edit
+```
+
+---
+
+## 🔄 Architecture Flow
+
+```mermaid
 graph TD
     A[📝 User Question] --> B[🧩 generate_queries()]
     B --> C[🌐 WebSearchTool.run()]
@@ -141,16 +153,20 @@ graph TD
     F --> H[📤 Final Answer + Citations]
     G --> H
     H --> I[💾 Save to Redis Cache]
-📦 Requirements
-Python 3.11+
+```
 
-Redis (locally or via Docker)
+---
 
-Google CSE + API Key
+## 📦 Requirements
 
-Gemini API Key
+- Python 3.11+
+- Redis (local or Docker)
+- Gemini API Key (Google GenAI)
+- Google Custom Search API & CSE ID
 
-🪪 License
-MIT License
-© 2025 Ignatius Wisesa
+---
 
+## 🪪 License
+
+MIT License  
+© 2025 [Ignatius Wisesa](https://github.com/IgnatiusWisesa)

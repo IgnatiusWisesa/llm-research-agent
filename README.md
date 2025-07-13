@@ -138,18 +138,16 @@ print(answer)
 
 ## Architecture Flow
 
-```mermaid
 graph TD
     A[User Question] --> B[generate_queries()]
     B --> C[WebSearchTool.run()]
     C --> D[Documents]
     D --> E[reflect()]
-    E -->|need_more = False| F[synthesize()]
-    E -->|need_more = True| G[Suggest new queries]
+    E -->|need_more=False| F[synthesize()]
+    E -->|need_more=True| G[Suggest new queries]
     F --> H[Final Answer + Citations]
     G --> H
     H --> I[Save to Redis Cache]
-```
 
 ---
 

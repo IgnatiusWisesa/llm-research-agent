@@ -6,7 +6,10 @@ from agent.nodes.generate_queries import generate_queries
 from agent.nodes.reflect import reflect
 from agent.nodes.synthesize import synthesize
 from agent.tools.websearch import WebSearchTool
+from opentelemetry import trace
+from agent.utils.metrics import TOOL_CALL_COUNT, TOOL_LATENCY
 
+tracer = trace.get_tracer(__name__)
 redis_client = redis.Redis(
     host=os.getenv("REDIS_HOST", "localhost"),
     port=6379,
@@ -19,78 +22,88 @@ CACHE_LIMIT = 50
 MAX_REFLECTION_ROUNDS = 2
 
 async def run_pipeline(question: str) -> dict:
-    normalized_question = question.strip().lower()
-    cache_key = CACHE_PREFIX + normalized_question
+    with tracer.start_as_current_span("run_pipeline"):
+        normalized_question = question.strip().lower()
+        cache_key = CACHE_PREFIX + normalized_question
 
-    # 1. Check cache
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
+        cached = redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
 
-    # 2. Generate initial queries
-    queries = generate_queries(question)
+        with tracer.start_as_current_span("generate_queries"):
+            TOOL_CALL_COUNT.labels("generate_queries").inc()
+            queries = generate_queries(question)
 
-    # 3. Perform web search
-    search_tool = WebSearchTool()
-    docs = await search_tool.run(queries)
+        with tracer.start_as_current_span("initial_web_search"):
+            TOOL_CALL_COUNT.labels("web_search").inc()
+            with TOOL_LATENCY.labels("web_search").time():
+                search_tool = WebSearchTool()
+                docs = await search_tool.run(queries)
 
-    # 4. Reflect and optionally expand
-    rounds = 0
-    while rounds < MAX_REFLECTION_ROUNDS:
-        reflection = reflect(question, docs)
-        if not reflection.get("need_more") or not reflection.get("new_queries"):
-            break  # Sufficient info
-        print(f"🔄 Reflection round {rounds+1}: need more info, expanding...")
-        extra_docs = await search_tool.run(reflection["new_queries"])
-        docs += extra_docs
-        rounds += 1
+        rounds = 0
+        while rounds < MAX_REFLECTION_ROUNDS:
+            with tracer.start_as_current_span(f"reflect_round_{rounds+1}"):
+                TOOL_CALL_COUNT.labels("reflect").inc()
+                reflection = reflect(question, docs)
 
-    # 5. Final synthesis
-    result = synthesize(question, docs)
+            if not reflection.get("need_more") or not reflection.get("new_queries"):
+                break
 
-    # 6. Normalize citations (e.g. remap [3,5,8] → [1,2,3])
-    matches = re.findall(r"\[(.*?)\]", result["answer"])
-    used_ids = set()
-    for m in matches:
-        for part in re.split(r"[,\s]+", m):
-            if part.isdigit():
-                used_ids.add(int(part))
-    used_ids = sorted(used_ids)
-    id_map = {old: new for new, old in enumerate(used_ids, 1)}
+            print(f"🔄 Reflection round {rounds+1}: need more info, expanding...")
 
-    def replace(match):
-        parts = match.group(1)
-        new_parts = []
-        for p in re.split(r"[,\s]+", parts):
-            if p.isdigit():
-                new_parts.append(str(id_map.get(int(p), p)))
-        return f"[{', '.join(new_parts)}]"
+            with tracer.start_as_current_span(f"web_search_round_{rounds+1}"):
+                TOOL_CALL_COUNT.labels("web_search").inc()
+                with TOOL_LATENCY.labels("web_search").time():
+                    extra_docs = await search_tool.run(reflection["new_queries"])
+                    docs += extra_docs
+            rounds += 1
 
-    final_answer = re.sub(r"\[(.*?)\]", replace, result["answer"])
+        with tracer.start_as_current_span("synthesize"):
+            TOOL_CALL_COUNT.labels("synthesize").inc()
+            result = synthesize(question, docs)
 
-    final_citations = []
-    for citation in result["citations"]:
-        old_id = citation["id"]
-        if old_id in id_map:
-            final_citations.append({
-                "id": id_map[old_id],
-                "title": citation["title"],
-                "url": citation["url"]
-            })
+        # Normalize citations
+        matches = re.findall(r"\[(.*?)\]", result["answer"])
+        used_ids = set()
+        for m in matches:
+            for part in re.split(r"[,\s]+", m):
+                if part.isdigit():
+                    used_ids.add(int(part))
+        used_ids = sorted(used_ids)
+        id_map = {old: new for new, old in enumerate(used_ids, 1)}
 
-    output = {
-        "status": "complete",
-        "answer": final_answer,
-        "citations": final_citations
-    }
+        def replace(match):
+            parts = match.group(1)
+            new_parts = []
+            for p in re.split(r"[,\s]+", parts):
+                if p.isdigit():
+                    new_parts.append(str(id_map.get(int(p), p)))
+            return f"[{', '.join(new_parts)}]"
 
-    # 7. Save to Redis cache
-    redis_client.set(cache_key, json.dumps(output), ex=86400)
+        final_answer = re.sub(r"\[(.*?)\]", replace, result["answer"])
 
-    # 8. Evict oldest keys if exceeding limit
-    all_keys = redis_client.keys(f"{CACHE_PREFIX}*")
-    if len(all_keys) > CACHE_LIMIT:
-        for key in sorted(all_keys)[:-CACHE_LIMIT]:
-            redis_client.delete(key)
+        final_citations = []
+        for citation in result["citations"]:
+            old_id = citation["id"]
+            if old_id in id_map:
+                final_citations.append({
+                    "id": id_map[old_id],
+                    "title": citation["title"],
+                    "url": citation["url"]
+                })
 
-    return output
+        output = {
+            "status": "complete",
+            "answer": final_answer,
+            "citations": final_citations
+        }
+
+        redis_client.set(cache_key, json.dumps(output), ex=86400)
+
+        all_keys = redis_client.keys(f"{CACHE_PREFIX}*")
+        if len(all_keys) > CACHE_LIMIT:
+            for key in sorted(all_keys)[:-CACHE_LIMIT]:
+                redis_client.delete(key)
+
+        return output
+

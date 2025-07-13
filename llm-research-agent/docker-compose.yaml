@@ -16,6 +16,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       PYTHONPATH: /app/src
+      OTEL_SDK_DISABLED: "true"
     working_dir: /app
     volumes:
       - .:/app

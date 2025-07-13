@@ -1,4 +1,4 @@
-# 🤖 LLM Research Agent (CLI)
+# 🤖 LLM Research Agent (CLI + API)
 
 A command-line research assistant that takes a natural language question, decomposes it into search queries, fetches real-time web results, reflects on coverage, and synthesizes a short, cited answer — powered by **Gemini** and **Google Custom Search**.
 
@@ -17,6 +17,7 @@ A command-line research assistant that takes a natural language question, decomp
 - 🧾 **Synthesis Engine** — Answers questions with markdown-style citations
 - 🔄 **Citation Remapping** — Compresses citation IDs (e.g., `[1, 2]` instead of `[3, 7]`)
 - ⚡ **Redis Caching** — Caches previous results for speed and repeatability
+- 📊 **OpenTelemetry & Prometheus** — Collects tool call counts and latencies
 - 🧪 **Unit Tests** — Covers normal use, timeout, no docs, retry, and 429 fallback
 
 ---
@@ -27,22 +28,14 @@ A command-line research assistant that takes a natural language question, decomp
 llm-research-agent/
 ├── src/
 │   ├── main.py
+│   ├── api_server.py              ← 🔥 FastAPI server entrypoint
 │   └── agent/
 │       ├── nodes/
-│       │   ├── generate_queries.py
-│       │   ├── reflect.py
-│       │   └── synthesize.py
 │       ├── tools/
-│       │   └── websearch.py
 │       ├── types/
-│       │   └── document.py
 │       └── utils/
-│           ├── slot_utils.py
-│           └── cache_utils.py
 ├── tests/
-│   ├── test_reflect.py
-│   ├── test_queries.py
-│   └── conftest.py
+├── docker-compose.yaml
 ├── .env.example
 ├── requirements.txt
 └── README.md
@@ -64,7 +57,7 @@ cp .env.example .env
 
 ### 2. Configure `.env`
 
-```
+```env
 GEMINI_API_KEY=your_google_genai_key
 GOOGLE_API_KEY=your_google_search_api_key
 GOOGLE_CSE_ID=your_custom_search_engine_id
@@ -73,7 +66,7 @@ REDIS_HOST=localhost
 
 ---
 
-## ✅ Run Unit Tests
+## 🧪 Run Unit Tests
 
 ```bash
 pytest -q tests/
@@ -88,53 +81,28 @@ Scenarios tested:
 
 ---
 
-## 🧠 CLI Example
+## 🧠 CLI Usage
 
 ```bash
-python src/main.py "Who won the 2022 FIFA World Cup?"
-```
-
-Output:
-
-```json
-{
-  "status": "complete",
-  "answer": "Argentina won the 2022 FIFA World Cup, defeating France 4-2 on penalties after a 3-3 draw. [1, 2]",
-  "citations": [
-    {
-      "id": 1,
-      "title": "2022 FIFA World Cup final - Wikipedia",
-      "url": "https://en.wikipedia.org/wiki/2022_FIFA_World_Cup_final"
-    },
-    {
-      "id": 2,
-      "title": "How Argentina won the 2022 World Cup - ESPN",
-      "url": "https://www.espn.com/soccer/story/_/id/123456"
-    }
-  ]
-}
+python src/main.py "Compare Kubernetes HPA and KEDA"
 ```
 
 ---
 
-## 🐍 Python API Usage
+## 🖥️ Run the Backend API Server
 
-```python
-from agent.nodes.synthesize import synthesize
-from agent.types.document import Document
+```bash
+uvicorn agent.api_server:app --reload --app-dir src
+```
 
-question = "Explain black holes like I'm five."
+- FastAPI runs on: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- Metrics endpoint: [http://127.0.0.1:8000/metrics](http://127.0.0.1:8000/metrics)
+- Query endpoint: `POST /api/query` with JSON body:
 
-docs = [
-    Document(
-        title="What Is a Black Hole?",
-        snippet="A black hole is a place in space where gravity is so strong nothing can escape.",
-        url="https://example.com/black-hole"
-    )
-]
-
-result = synthesize(question, docs)
-print(result["answer"])
+```json
+{
+  "question": "What is the difference between Kubernetes HPA and KEDA?"
+}
 ```
 
 ---
@@ -169,6 +137,18 @@ print(result["answer"])
 - Redis (optional but recommended)
 - Gemini API Key (via Google AI Studio)
 - Google CSE API Key + Custom Search Engine ID
+
+---
+
+## 📊 Monitoring & Metrics
+
+This app uses `prometheus-fastapi-instrumentator` and `OpenTelemetry` to expose internal performance metrics.
+
+- Prometheus-compatible metrics at: `GET /metrics`
+- Includes:
+  - GC stats
+  - Tool call counts & latencies
+  - HTTP request durations and status codes
 
 ---
 

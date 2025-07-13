@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  agent:
+    build: .
+    env_file:
+      - .env
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      BING_API_KEY: ${BING_API_KEY}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PYTHONPATH: /app/src
+    working_dir: /app
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    entrypoint: ["python", "src/main.py"]

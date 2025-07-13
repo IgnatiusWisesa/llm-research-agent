@@ -5,19 +5,41 @@ from dotenv import load_dotenv
 from google import genai
 from agent.types.document import Document
 
+# Load environment variables (e.g. GEMINI_API_KEY from .env)
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def synthesize(question: str, docs: List[Document]) -> dict:
+    """
+    Synthesizes a short answer from a list of retrieved documents using Gemini.
+
+    The output includes:
+    - a concise answer under 80 words,
+    - markdown-style citations like [1], [2],
+    - a citation map with links to the original documents.
+
+    Args:
+        question (str): The user's original research question.
+        docs (List[Document]): The list of documents to synthesize from.
+
+    Returns:
+        dict: {
+            "status": "complete",
+            "answer": str,
+            "citations": List[Dict]
+        }
+    """
+
     print(">>> synthesize() called")
     print(">>> Question:", question)
     print(">>> Number of docs:", len(docs))
 
-    # Build citation context with [1], [2], ...
+    # Step 1: Format documents into numbered context (e.g., [1], [2], ...)
     context = ""
     for idx, doc in enumerate(docs, 1):
         context += f"[{idx}] Title: {doc.title}\nSnippet: {doc.snippet}\nURL: {doc.url}\n\n"
 
+    # Step 2: Prepare prompt for Gemini
     prompt = f"""You're a helpful research assistant.
 
 Here is the question: {question}
@@ -32,15 +54,17 @@ Keep the answer under 80 words.
 Only output the answer sentence, no explanation or prefix.
 """
 
+    # Step 3: Send prompt to Gemini
     response = client.models.generate_content(
         model="gemini-1.5-flash",
         contents=[{"parts": [{"text": prompt}]}]
     )
 
+    # Step 4: Extract answer text from Gemini response
     answer = response.text.strip() if hasattr(response, "text") else str(response)
     print("📤 Raw Answer from Gemini:", answer)
 
-    # Extract all citation numbers, e.g. from [1], [4, 5], [6, 8, 11, 12, 21, 22]
+    # Step 5: Extract all citation IDs from the answer (e.g. [1], [3, 4], etc.)
     matches = re.findall(r"\[(.*?)\]", answer)
     used_ids = set()
     for match in matches:
@@ -51,11 +75,11 @@ Only output the answer sentence, no explanation or prefix.
     used_ids = sorted(used_ids)
     print("🔢 Used citation IDs in answer:", used_ids)
 
-    # Mapping old_id → new_id [1], [2], ...
+    # Step 6: Create a mapping from original ID → compact ID
     id_mapping = {old: new for new, old in enumerate(used_ids, 1)}
     print("📑 ID mapping (old → new):", id_mapping)
 
-    # Replace citations in answer text using mapping
+    # Step 7: Replace citations in the answer text with compact IDs
     def replace_citations(text: str, id_mapping: dict[int, int]) -> str:
         def repl(match):
             ids = match.group(1)
@@ -70,7 +94,7 @@ Only output the answer sentence, no explanation or prefix.
 
     updated_answer = replace_citations(answer, id_mapping)
 
-    # Build citation map
+    # Step 8: Build the final citation map (ID + title + URL)
     citation_map = []
     for old_id in used_ids:
         if 1 <= old_id <= len(docs):
@@ -85,6 +109,7 @@ Only output the answer sentence, no explanation or prefix.
 
     print("📚 Final citation map:", citation_map)
 
+    # Step 9: Return structured answer
     return {
         "status": "complete",
         "answer": updated_answer,

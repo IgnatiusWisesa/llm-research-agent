@@ -10,7 +10,7 @@ from agent.nodes.reflect import reflect
 from agent.nodes.synthesize import synthesize
 from agent.tools.websearch import WebSearchTool
 
-# Redis setup
+# === Redis setup ===
 redis_client = redis.Redis(
     host=os.getenv("REDIS_HOST", "localhost"),
     port=6379,
@@ -20,39 +20,40 @@ redis_client = redis.Redis(
 CACHE_PREFIX = "llm_cache:"
 CACHE_LIMIT = 50
 
-# Ambil pertanyaan dari argumen CLI atau default
+# === Accept user question from CLI argument, or use a default fallback ===
 question = sys.argv[1] if len(sys.argv) > 1 else "What is AI?"
 normalized_question = question.strip().lower()
 cache_key = CACHE_PREFIX + normalized_question
 
 async def main():
-    # Step 0: Cek Redis Cache
+    # === Step 0: Check if answer already exists in Redis cache ===
     cached = redis_client.get(cache_key)
     if cached:
         print("\n💾 Loaded from Redis cache:\n")
         print(cached)
         return
 
-    # Step 1: generate queries
+    # === Step 1: Generate search queries using Gemini ===
     queries = generate_queries(question)
     print("\n🧩 Generated Queries:")
     for q in queries:
         print("-", q)
 
-    # Step 2: run web search
+    # === Step 2: Search the web using Google Custom Search API ===
     search_tool = WebSearchTool()
     docs = await search_tool.run(queries)
     print("\n🔍 Search Results:")
     for i, doc in enumerate(docs, 1):
         print(f"{i}. {doc.title}\n   {doc.snippet}\n   {doc.url}\n")
 
-    # Step 3: reflect
+    # === Step 3: Reflect to see if current results are enough to answer ===
     print("\n🪞 Calling reflect()...")
     reflection = reflect(question, docs)
     print("\n🪞 Reflect Result:")
     print(reflection)
 
     if reflection["need_more"]:
+        # Not enough info yet → return additional queries
         print("\n🔁 Not enough info. Consider running new queries:")
         for q in reflection["new_queries"]:
             print("-", q)
@@ -61,25 +62,25 @@ async def main():
             "new_queries": reflection["new_queries"]
         }
     else:
-        # Step 4: synthesize
+        # === Step 4: Synthesize final answer from retrieved documents ===
         print("\n🧠 Synthesizing final answer...")
         result = synthesize(question, docs)
 
-        # Assign sequential citation IDs
+        # Step 4.1: Assign new sequential citation IDs (1, 2, 3, ...)
         for idx, citation in enumerate(result["citations"]):
             citation["id"] = idx + 1
 
-        # Extract citation numbers from answer
+        # Step 4.2: Extract citation numbers from the original synthesized text
         used_citation_ids = list(map(int, re.findall(r"\[(\d+)\]", result["answer"])))
 
-        # Create mapping from old ID to new sequential ID
+        # Step 4.3: Build a mapping from old to new citation IDs
         old_to_new_id = {old_id: new_id for new_id, old_id in enumerate(used_citation_ids, 1)}
 
-        # Update citation metadata with new IDs
+        # Step 4.4: Update the citation metadata to reflect new IDs
         for citation in result["citations"]:
             citation["id"] = old_to_new_id.get(citation.get("id"), citation.get("id"))
 
-        # Replace citation references in the answer text
+        # Step 4.5: Replace old citation numbers in the final answer with new ones
         def replace_citation_ids(match):
             old_id = int(match.group(1))
             return f"[{old_to_new_id.get(old_id, old_id)}]"
@@ -95,17 +96,19 @@ async def main():
             "citations": result["citations"]
         }
 
-    # Output final JSON
+    # === Step 5: Output result in JSON format ===
     output_json = json.dumps(output, indent=2)
     print("\n📦 Final JSON Output:")
     print(output_json)
 
-    # Save to Redis with TTL and trim cache size
+    # === Step 6: Save result to Redis for caching (TTL: 1 day) ===
     redis_client.set(cache_key, output_json, ex=86400)
+
+    # Clean up older keys if cache exceeds limit
     all_keys = redis_client.keys(f"{CACHE_PREFIX}*")
     if len(all_keys) > CACHE_LIMIT:
         for key in sorted(all_keys)[:-CACHE_LIMIT]:
             redis_client.delete(key)
 
-# Run the pipeline
+# === Kick off the async pipeline ===
 asyncio.run(main())

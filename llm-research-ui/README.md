@@ -1,12 +1,114 @@
-# React + Vite
+# 🧠 LLM Research UI (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A minimal frontend built with **React + Vite**, designed to interact with the [LLM Research Agent](https://github.com/IgnatiusWisesa/llm-research-agent).  
+This interface allows users to input natural language questions and receive concise, cited answers powered by Gemini and real-time web search.
 
-Currently, two official plugins are available:
+![React](https://img.shields.io/badge/React-18-blue?logo=react)
+![Vite](https://img.shields.io/badge/Vite-5-purple?logo=vite)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🚀 Features
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- 🌐 Simple research UI connected to FastAPI backend
+- 🔁 Hot Module Replacement via Vite
+- 🧼 Preconfigured with ESLint for code quality
+- 💡 Instant citation-based answer rendering
+- 🔒 CORS-ready (communicates with `http://localhost:8000`)
+
+---
+
+## 📦 Tech Stack
+
+- **React 18**
+- **Vite**
+- **Axios** for HTTP requests
+- **Tailwind CSS** (optional, if used)
+- **FastAPI** backend (see [llm-research-agent](https://github.com/IgnatiusWisesa/llm-research-agent))
+
+---
+
+## 📂 Folder Structure
+
+```
+llm-research-ui/
+├── public/                 # Static assets
+├── src/
+│   ├── components/         # Reusable UI components
+│   ├── App.jsx             # Main app component
+│   ├── main.jsx            # Entry point
+│   └── index.css           # Styles (Tailwind or custom)
+├── .eslintrc.cjs           # Linting rules
+├── vite.config.js          # Vite config
+├── package.json
+└── README.md
+```
+
+---
+
+## 🛠️ Setup & Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/IgnatiusWisesa/llm-research-ui.git
+cd llm-research-ui
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Run the development server
+
+```bash
+npm run dev
+```
+
+Then open `http://localhost:5173` in your browser.
+
+> Make sure the backend (`llm-research-agent`) is also running at `http://localhost:8000`
+
+---
+
+## 🔄 Backend API Expectation
+
+This frontend assumes the backend exposes:
+
+```
+POST /api/query
+Content-Type: application/json
+
+{
+  "question": "Your natural language question"
+}
+```
+
+Response:
+
+```json
+{
+  "status": "complete",
+  "answer": "The quick answer with [1] [2]",
+  "citations": [
+    { "id": 1, "title": "Title", "url": "https://..." }
+  ]
+}
+```
+
+---
+
+## 🧪 Linting (Optional)
+
+```bash
+npm run lint
+```
+
+---
+
+## 📄 License
+
+MIT © 2025 Ignatius Wisesa

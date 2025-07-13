@@ -12,14 +12,9 @@ A command-line tool that takes a natural language question, decomposes it into s
 - ✅ **Query Generation** — Breaks down a question into 3–5 relevant search queries.
 - 🔍 **Web Search Tool** — Uses Google Custom Search API to fetch relevant results.
 - 🪞 **Reflective Slot Check** — Uses Gemini to verify if all required information slots are filled.
-- 🧠 **Synthesis Engine** — Synthesizes a short, beginner-friendly answer with [Markdown-style citations].
+- 🧠 **Synthesis Engine** — Synthesizes a short, beginner-friendly answer with Markdown-style citations.
 - 💾 **Redis Cache** — Speeds up repeated queries with caching (max 50 entries).
-- 🧪 **Comprehensive Unit Tests** — Tests reflect function across:
-  - ✅ normal
-  - 🚫 no docs
-  - 🔁 two-round follow-up
-  - ⚠️ 429 errors
-  - ⏱️ timeout
+- 🧪 **Comprehensive Unit Tests** — Tests reflect function across 5 scenarios: ✅ normal, 🚫 no docs, 🔁 two-round, ⚠️ 429, ⏱️ timeout.
 
 ---
 
@@ -84,13 +79,12 @@ REDIS_HOST=localhost
 pytest -q tests/
 ```
 
-Test coverage includes:
-
-- ✅ Happy path  
-- 🈳 No results  
-- ⛔ HTTP 429 (rate limited)  
-- ⏱ Timeout  
-- 🔁 Follow-up query suggestion  
+**Tests cover:**
+- ✅ Happy path
+- 🈳 No results
+- ⛔ HTTP 429 (rate limited)
+- ⏱ Timeout
+- 🔁 Two-round supplement (follow-up queries)
 
 ---
 
@@ -100,8 +94,7 @@ Test coverage includes:
 python src/main.py "Who won the 2022 FIFA World Cup and who scored the goals?"
 ```
 
-### 📦 Output
-
+**📦 Output:**
 ```json
 {
   "status": "complete",
@@ -140,7 +133,7 @@ print(answer)
 
 ---
 
-### 🔄 Architecture Flow
+## 🔄 Architecture Flow
 
 ```mermaid
 graph TD
@@ -161,12 +154,12 @@ graph TD
 
 - Python 3.11+
 - Redis (local or Docker)
-- Gemini API Key (Google GenAI)
-- Google Custom Search API & CSE ID
+- Google CSE + API Key
+- Gemini API Key
 
 ---
 
 ## 🪪 License
 
 MIT License  
-© 2025 [Ignatius Wisesa](https://github.com/IgnatiusWisesa)
+© 2025 Ignatius Wisesa

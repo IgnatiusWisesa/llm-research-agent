@@ -1,25 +1,27 @@
+# 🤖 LLM Research Agent (CLI)
 
-# LLM Research Agent (CLI)
-
-A command-line tool that takes a natural language question, decomposes it into search queries, fetches real-time web results, reflects on the completeness of the information, and synthesizes a cited answer — powered by Gemini and Google CSE.
+A command-line research assistant that takes a natural language question, decomposes it into search queries, fetches real-time web results, reflects on coverage, and synthesizes a short, cited answer — powered by **Gemini** and **Google Custom Search**.
 
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Gemini API](https://img.shields.io/badge/Gemini-1.5--flash-yellow)
+![Redis Cache](https://img.shields.io/badge/Redis-enabled-red)
 
 ---
 
-## Features
+## ✨ Features
 
-- Query Generation — Breaks down a question into 3–5 relevant search queries.
-- Web Search Tool — Uses Google Custom Search API to fetch relevant results.
-- Reflective Slot Check — Uses Gemini to verify if all required information slots are filled.
-- Synthesis Engine — Synthesizes a short, beginner-friendly answer with [Markdown-style citations].
-- Redis Cache — Speeds up repeated queries with caching (max 50 entries).
-- Unit Tests — Tests reflect function across 5 scenarios: normal, no docs, two-round, 429, timeout.
+- ✅ **Query Generator** — Breaks the question into 3–5 useful search queries
+- 🔍 **Web Search** — Uses Google CSE to retrieve real-time search results
+- 🧠 **Reflective Check** — Uses Gemini to verify if all information slots are covered
+- 🧾 **Synthesis Engine** — Answers questions with markdown-style citations
+- 🔄 **Citation Remapping** — Compresses citation IDs (e.g., `[1, 2]` instead of `[3, 7]`)
+- ⚡ **Redis Caching** — Caches previous results for speed and repeatability
+- 🧪 **Unit Tests** — Covers normal use, timeout, no docs, retry, and 429 fallback
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 llm-research-agent/
@@ -48,22 +50,19 @@ llm-research-agent/
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-### 1. Clone and Install
+### 1. Clone the Repo & Install Dependencies
 
 ```bash
 git clone https://github.com/IgnatiusWisesa/llm-research-agent.git
 cd llm-research-agent
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Copy and fill environment variables
 cp .env.example .env
 ```
 
-### 2. Set Up .env
+### 2. Configure `.env`
 
 ```
 GEMINI_API_KEY=your_google_genai_key
@@ -74,39 +73,43 @@ REDIS_HOST=localhost
 
 ---
 
-## Run Tests
+## ✅ Run Unit Tests
 
 ```bash
 pytest -q tests/
 ```
 
-Tests cover:
-
-- Happy path
-- No results
-- HTTP 429 (rate limited)
-- Timeout
-- Two-round supplement (follow-up queries)
+Scenarios tested:
+- ✔️ Happy path
+- ⛔ No results
+- 🔁 Two-round follow-up
+- 🔄 Timeout + retries
+- 🚫 HTTP 429 (rate-limited)
 
 ---
 
-## CLI Usage Example
+## 🧠 CLI Example
 
 ```bash
-python src/main.py "Who won the 2022 FIFA World Cup and who scored the goals?"
+python src/main.py "Who won the 2022 FIFA World Cup?"
 ```
 
-Example Output:
+Output:
 
 ```json
 {
   "status": "complete",
-  "answer": "Argentina won the 2022 World Cup final against France [1]. Lionel Messi and Kylian Mbappé were the top scorers [1].",
+  "answer": "Argentina won the 2022 FIFA World Cup, defeating France 4-2 on penalties after a 3-3 draw. [1, 2]",
   "citations": [
     {
       "id": 1,
-      "title": "Argentina wins World Cup",
-      "url": "https://example.com/final"
+      "title": "2022 FIFA World Cup final - Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/2022_FIFA_World_Cup_final"
+    },
+    {
+      "id": 2,
+      "title": "How Argentina won the 2022 World Cup - ESPN",
+      "url": "https://www.espn.com/soccer/story/_/id/123456"
     }
   ]
 }
@@ -114,7 +117,7 @@ Example Output:
 
 ---
 
-## Python API Usage
+## 🐍 Python API Usage
 
 ```python
 from agent.nodes.synthesize import synthesize
@@ -125,43 +128,51 @@ question = "Explain black holes like I'm five."
 docs = [
     Document(
         title="What Is a Black Hole?",
-        snippet="A black hole is a place in space where gravity is so strong that nothing—not even light—can escape.",
+        snippet="A black hole is a place in space where gravity is so strong nothing can escape.",
         url="https://example.com/black-hole"
     )
 ]
 
-answer = synthesize(question, docs)
-print(answer)
+result = synthesize(question, docs)
+print(result["answer"])
 ```
 
 ---
 
-## Architecture Flow
+## 🧭 Architecture Flow
 
-```
-    A[User Question] --> B[generate_queries()]
-    B --> C[WebSearchTool.run()]
-    C --> D[Documents]
-    D --> E[reflect()]
-    E -->|need_more=False| F[synthesize()]
-    E -->|need_more=True| G[Suggest new queries]
-    F --> H[Final Answer + Citations]
-    G --> H
-    H --> I[Save to Redis Cache]
+```text
+    [User Question]
+           ↓
+  generate_queries()
+           ↓
+   WebSearchTool.run()
+           ↓
+        Documents
+           ↓
+         reflect()
+        ↙       ↘
+   enough?      suggest new queries
+     ↓
+ synthesize()
+     ↓
+[Answer + Citations]
+     ↓
+     Cache (Redis)
 ```
 
 ---
 
-## Requirements
+## 📦 Requirements
 
 - Python 3.11+
-- Redis (locally or via Docker)
-- Google CSE + API Key
-- Gemini API Key
+- Redis (optional but recommended)
+- Gemini API Key (via Google AI Studio)
+- Google CSE API Key + Custom Search Engine ID
 
 ---
 
-## License
+## 📄 License
 
 MIT License  
-© 2025 Ignatius Wisesa
+© 2025 [Ignatius Wisesa](https://github.com/IgnatiusWisesa)

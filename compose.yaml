@@ -21,4 +21,4 @@ services:
       - .:/app
     depends_on:
       - redis
-    entrypoint: ["python", "src/agent/main.py"]
+    entrypoint: ["python", "src/main.py"]

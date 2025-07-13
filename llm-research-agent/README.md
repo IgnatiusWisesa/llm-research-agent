@@ -28,7 +28,7 @@ A command-line research assistant that takes a natural language question, decomp
 llm-research-agent/
 ├── src/
 │   ├── main.py
-│   ├── api_server.py              ← 🔥 FastAPI server entrypoint
+│   ├── api_server.py
 │   └── agent/
 │       ├── nodes/
 │       ├── tools/

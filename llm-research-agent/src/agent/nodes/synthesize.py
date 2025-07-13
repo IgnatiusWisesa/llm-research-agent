@@ -14,11 +14,12 @@ def synthesize(question: str, docs: List[Document]) -> dict:
     print(">>> Question:", question)
     print(">>> Number of docs:", len(docs))
 
-    # Format documents
+    # Step 1: Format documents into context
     context = ""
     for idx, doc in enumerate(docs, 1):
         context += f"[{idx}] Title: {doc.title}\nSnippet: {doc.snippet}\nURL: {doc.url}\n\n"
 
+    # Step 2: Prompt with stronger instruction
     prompt = f"""You're a helpful research assistant.
 
 Given the question and the documents below, return a JSON object with:
@@ -26,6 +27,8 @@ Given the question and the documents below, return a JSON object with:
 - "citations": an array of objects with "id", "title", and "url"
 
 Only return valid JSON. Do NOT include backticks or markdown.
+Do NOT say "Not enough information" or similar.
+Do your best to write a helpful answer even if information is partial.
 
 Question: {question}
 
@@ -37,7 +40,7 @@ Format:
   "answer": "...",
   "citations": [
     {{
-      "id": 3,
+      "id": 1,
       "title": "...",
       "url": "..."
     }}
@@ -45,6 +48,7 @@ Format:
 }}
 """
 
+    # Step 3: Get Gemini response
     response = client.models.generate_content(
         model="gemini-1.5-flash",
         contents=[{"parts": [{"text": prompt}]}]
@@ -54,19 +58,15 @@ Format:
     print("📤 Raw Gemini response:", raw)
 
     try:
-        if raw.startswith("```json"):
-            raw = raw[7:]
-        elif raw.startswith("```"):
-            raw = raw[3:]
-        raw = raw.strip("`\n ")
-
+        # Step 4: Clean and parse JSON
+        raw = re.sub(r"^```(?:json)?", "", raw, flags=re.IGNORECASE).strip("`\n ")
         json_start = raw.find("{")
         result = json.loads(raw[json_start:])
+
         original_answer = result.get("answer", "")
         raw_citations = result.get("citations", [])
 
-        # --- Normalize citation IDs ---
-        # Extract [x], [x, y], etc. from answer
+        # Step 5: Extract citation IDs from [1], [2, 3], etc.
         matches = re.findall(r"\[(.*?)\]", original_answer)
         used_ids = set()
         for match in matches:
@@ -75,7 +75,7 @@ Format:
                     used_ids.add(int(part.strip()))
         used_ids = sorted(used_ids)
 
-        # Remap original ID → local [1, 2, 3]
+        # Step 6: Map old → new compact IDs
         id_mapping = {old_id: new_id for new_id, old_id in enumerate(used_ids, 1)}
 
         def replace_citations(text: str, id_mapping: dict[int, int]) -> str:
@@ -92,7 +92,7 @@ Format:
 
         updated_answer = replace_citations(original_answer, id_mapping)
 
-        # Create final compact citation list
+        # Step 7: Build final citation map
         final_citations = []
         for old_id in used_ids:
             for c in raw_citations:
@@ -103,6 +103,15 @@ Format:
                         "url": c["url"]
                     })
                     break
+
+        # Step 8: Optional fallback — check if answer is vague
+        if not updated_answer or "not enough" in updated_answer.lower() or len(updated_answer.split()) < 4:
+            print("⚠️ Gemini returned insufficient answer.")
+            return {
+                "status": "incomplete",
+                "answer": updated_answer,
+                "citations": final_citations
+            }
 
         return {
             "status": "complete",

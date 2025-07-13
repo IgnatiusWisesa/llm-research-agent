@@ -1,4 +1,5 @@
-# 🧠 LLM Research Agent (CLI)
+
+# LLM Research Agent (CLI)
 
 A command-line tool that takes a natural language question, decomposes it into search queries, fetches real-time web results, reflects on the completeness of the information, and synthesizes a cited answer — powered by Gemini and Google CSE.
 
@@ -7,18 +8,18 @@ A command-line tool that takes a natural language question, decomposes it into s
 
 ---
 
-## ✨ Features
+## Features
 
-- ✅ **Query Generation** — Breaks down a question into 3–5 relevant search queries.
-- 🔍 **Web Search Tool** — Uses Google Custom Search API to fetch relevant results.
-- 🪞 **Reflective Slot Check** — Uses Gemini to verify if all required information slots are filled.
-- 🧠 **Synthesis Engine** — Synthesizes a short, beginner-friendly answer with Markdown-style citations.
-- 💾 **Redis Cache** — Speeds up repeated queries with caching (max 50 entries).
-- 🧪 **Comprehensive Unit Tests** — Tests reflect function across 5 scenarios: ✅ normal, 🚫 no docs, 🔁 two-round, ⚠️ 429, ⏱️ timeout.
+- Query Generation — Breaks down a question into 3–5 relevant search queries.
+- Web Search Tool — Uses Google Custom Search API to fetch relevant results.
+- Reflective Slot Check — Uses Gemini to verify if all required information slots are filled.
+- Synthesis Engine — Synthesizes a short, beginner-friendly answer with [Markdown-style citations].
+- Redis Cache — Speeds up repeated queries with caching (max 50 entries).
+- Unit Tests — Tests reflect function across 5 scenarios: normal, no docs, two-round, 429, timeout.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 llm-research-agent/
@@ -47,9 +48,9 @@ llm-research-agent/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-### 1️⃣ Clone and Install
+### 1. Clone and Install
 
 ```bash
 git clone https://github.com/IgnatiusWisesa/llm-research-agent.git
@@ -62,9 +63,9 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### 2️⃣ Set Up `.env`
+### 2. Set Up .env
 
-```env
+```
 GEMINI_API_KEY=your_google_genai_key
 GOOGLE_API_KEY=your_google_search_api_key
 GOOGLE_CSE_ID=your_custom_search_engine_id
@@ -73,28 +74,30 @@ REDIS_HOST=localhost
 
 ---
 
-## 🧪 Run Tests
+## Run Tests
 
 ```bash
 pytest -q tests/
 ```
 
-**Tests cover:**
-- ✅ Happy path
-- 🈳 No results
-- ⛔ HTTP 429 (rate limited)
-- ⏱ Timeout
-- 🔁 Two-round supplement (follow-up queries)
+Tests cover:
+
+- Happy path
+- No results
+- HTTP 429 (rate limited)
+- Timeout
+- Two-round supplement (follow-up queries)
 
 ---
 
-## 🧠 CLI Usage Example
+## CLI Usage Example
 
 ```bash
 python src/main.py "Who won the 2022 FIFA World Cup and who scored the goals?"
 ```
 
-**📦 Output:**
+Example Output:
+
 ```json
 {
   "status": "complete",
@@ -111,7 +114,7 @@ python src/main.py "Who won the 2022 FIFA World Cup and who scored the goals?"
 
 ---
 
-## 🧑‍💻 Python API Usage
+## Python API Usage
 
 ```python
 from agent.nodes.synthesize import synthesize
@@ -133,7 +136,7 @@ print(answer)
 
 ---
 
-## 🔄 Architecture Flow
+## Architecture Flow
 
 ```mermaid
 graph TD
@@ -150,16 +153,16 @@ graph TD
 
 ---
 
-## 📦 Requirements
+## Requirements
 
 - Python 3.11+
-- Redis (local or Docker)
+- Redis (locally or via Docker)
 - Google CSE + API Key
 - Gemini API Key
 
 ---
 
-## 🪪 License
+## License
 
 MIT License  
 © 2025 Ignatius Wisesa

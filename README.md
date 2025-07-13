@@ -138,7 +138,7 @@ print(answer)
 
 ## Architecture Flow
 
-graph TD
+```
     A[User Question] --> B[generate_queries()]
     B --> C[WebSearchTool.run()]
     C --> D[Documents]
@@ -148,6 +148,7 @@ graph TD
     F --> H[Final Answer + Citations]
     G --> H
     H --> I[Save to Redis Cache]
+```
 
 ---
 

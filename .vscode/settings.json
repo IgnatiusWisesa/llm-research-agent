@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./llm-research-agent/src"
+    ]
+}
